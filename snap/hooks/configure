@@ -1,0 +1,12 @@
+#!/bin/sh
+# Validates `snap set unrealtournament download-url=...`.
+set -e
+
+url="$(snapctl get download-url)"
+case "$url" in
+  "" | https://* | http://*) ;;
+  *)
+    echo "download-url must be an http:// or https:// URL" >&2
+    exit 1
+    ;;
+esac

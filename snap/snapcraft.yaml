@@ -1,0 +1,84 @@
+name: unrealtournament
+title: Unreal Tournament (UE4)
+base: core24
+version: '0.1.12'
+summary: Community installer and launcher for the Unreal Tournament UE4 client
+description: |
+  Native Linux launcher for the Unreal Tournament (UE4 pre-alpha) client.
+
+  The game data is not included in this snap. On first launch the
+  installer downloads Epic's last Linux client build (about 11 GB) from
+  Epic's original servers, or unpacks an UnrealTournament Linux zip you
+  already have, into your snap user directory. Run
+  `unrealtournament.setup` at any time to reinstall it.
+
+  To download from a different mirror:
+    sudo snap set unrealtournament download-url=https://example.com/UT-Linux.zip
+
+  Unreal Tournament is a trademark of Epic Games, Inc. This snap is not
+  affiliated with or endorsed by Epic Games.
+source-code: https://github.com/kenvandine/unrealtournament-snap
+issues: https://github.com/kenvandine/unrealtournament-snap/issues
+grade: stable
+confinement: strict
+
+# Epic only ever shipped x86_64 Linux client builds.
+platforms:
+  amd64:
+
+apps:
+  unrealtournament:
+    command: bin/ut-launcher
+    # The core24 gnome extension wires in the desktop runtime, GTK for
+    # zenity, and the gpu-2404 (mesa-2404) graphics stack.
+    extensions: [gnome]
+    plugs: &plugs
+      - opengl
+      - audio-playback
+      - joystick
+      - network
+      - network-bind
+      # Picking an existing client zip from ~ or external drives.
+      - home
+      - removable-media
+
+  setup:
+    command: bin/ut-launcher --setup
+    extensions: [gnome]
+    plugs: *plugs
+
+parts:
+  launcher:
+    plugin: dump
+    source: snap/local/
+    organize:
+      # ut-launcher.sh is committed with its executable bit set; dump keeps it.
+      ut-launcher.sh: bin/ut-launcher
+    stage-packages:
+      - curl
+      - unzip
+      - zenity
+      # OpenAL (bundled with the client) dlopens these audio backends.
+      - libpulse0
+      - libasound2t64
+      # Runtime dependencies of the client's bundled CEF3 (libcef.so).
+      - libnss3
+      - libnspr4
+      - libxss1
+      - libxtst6
+      - libdbus-glib-1-2
+
+  # libcef.so links libgconf-2.so.4, which Ubuntu dropped after 22.04.
+  # Stage the jammy build; it only needs glib/dbus, which noble provides.
+  gconf-compat:
+    plugin: nil
+    build-packages:
+      - curl
+    override-build: |
+      deb=libgconf-2-4_3.2.6-7ubuntu2_amd64.deb
+      curl -fsSLO "http://archive.ubuntu.com/ubuntu/pool/universe/g/gconf/$deb"
+      echo "ad86a4ee82b2631dab97d16736580f03108524a8040a790a6ef8b20cbd358be4  $deb" | sha256sum -c -
+      dpkg-deb -x "$deb" extracted
+      mkdir -p "$CRAFT_PART_INSTALL/usr/lib/x86_64-linux-gnu"
+      cp -a extracted/usr/lib/x86_64-linux-gnu/libgconf-2.so.4* \
+        "$CRAFT_PART_INSTALL/usr/lib/x86_64-linux-gnu/"

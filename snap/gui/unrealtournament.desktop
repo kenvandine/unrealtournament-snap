@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Unreal Tournament
+GenericName=Arena Shooter
+Comment=Community launcher for the Unreal Tournament UE4 client
+Exec=unrealtournament %U
+Terminal=false
+Categories=Game;ActionGame;
+Keywords=unreal;tournament;ut4;shooter;arena;fps;
+StartupWMClass=UE4-Linux-Shipping
