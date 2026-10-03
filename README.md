@@ -13,19 +13,39 @@ pattern as installer snaps like `steam` and `quake4-installer`.
 | --- | --- |
 | `snap/snapcraft.yaml` | core24, strict, `gnome` extension, plus the client's runtime libraries |
 | `snap/local/ut-launcher.sh` | Runs the installer on first launch, then starts the game |
-| `snap/local/ut-installer.py` | First-run installer: a GTK4/libadwaita window, or terminal output when there's no display |
+| `snap/local/ut-installer.py` | First-run installer: a GTK4/libadwaita window with gamepad support, or terminal output when there's no display |
 | `snap/hooks/configure` | Validates the `download-url` option |
 | `snap/gui/unrealtournament.desktop` | Desktop entry |
 
 ## Installer window
 
 The first launch opens a native GTK4/libadwaita window. It draws directly on Wayland (XWayland
-isn't needed), follows the desktop's light or dark style, and picks a local zip through the
-desktop file-chooser portal. It shows a progress bar with bytes done, transfer speed and time
-remaining, first while downloading and then while unpacking. Cancelling, or closing the window,
-keeps the partial download, and the next launch offers **Resume Download**.
+isn't needed) and needs neither a desktop shell nor a mouse. It shows a progress bar with bytes
+done, transfer speed and time remaining, first while downloading and then while unpacking.
+Cancelling, or closing the window, keeps the partial download, and the next launch offers
+**Resume Download**.
 
-![Installer states: choose source, downloading, unpacking, error](docs/installer.png)
+![Installer on a desktop: choose source, downloading, unpacking, error](docs/installer.png)
+
+### Handhelds and controllers
+
+- **Fullscreen without a desktop.** With no desktop session (a kiosk compositor such as
+  ubuntu-frame, gamescope, or Steam's Gaming Mode), the window goes fullscreen with larger text and
+  buttons, and adds a **Quit** button. To force this either way, set `UT_INSTALLER_FULLSCREEN=1`
+  or `0`.
+- **Gamepad navigation.** This uses libmanette and the `joystick` plug. The D-pad or left stick
+  moves through the buttons and list rows, **A** selects, and **B** goes back. B does nothing while
+  installing, so a stray press can't cancel an 11 GB download. A legend for the A and B buttons
+  appears at the bottom while a controller is connected. A keyboard works too: arrow keys, Enter,
+  and Escape for back.
+- **Choosing a zip needs no file dialog.** "Use a Zip File…" searches the home folder,
+  `~/Downloads`, `~/Desktop` and `~/Games`, plus USB drives under `/media`, `/run/media` and
+  `/mnt`. It lists only zips that actually contain the UT Linux client, and each one is a single
+  button press. If a drive can't be read, the page shows the `snap connect
+  unrealtournament:removable-media` command. On a regular desktop with a portal running, there's
+  also a **Browse Files…** button that opens the system file chooser.
+
+![Installer in handheld mode at 1280×800: choose, zip list, unpacking](docs/installer-handheld.png)
 
 ## Usage
 
@@ -89,6 +109,10 @@ returns an HTML page, not a zip, so the snap doesn't use it.
 ## QA checklist
 
 - [ ] First-run download, cancel, then resume; first run from a local zip; `unrealtournament.setup`
+- [ ] On a handheld (ubuntu-frame or gamescope): the installer is fullscreen, the gamepad works
+      from launch, and a controller plugged in while it's running is picked up. Hotplug relies on
+      udev events reaching the snap through the `joystick` interface; this hasn't been checked on
+      hardware yet.
 - [ ] `LIBGL_DEBUG=verbose unrealtournament` uses the host GPU, not llvmpipe
 - [ ] Gamepads appear with `joystick` connected
 - [ ] OpenAL audio through PipeWire-pulse

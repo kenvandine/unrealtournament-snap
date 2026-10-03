@@ -10,6 +10,12 @@ set -euo pipefail
 INSTALL_DIR="$SNAP_USER_COMMON/game"
 STAMP="$INSTALL_DIR/.installed"
 
+# Staged libraries: libmanette for the installer's gamepad support; NSS,
+# gconf, etc. for the client's CEF; OpenAL backends. Appended so the gnome
+# runtime and gpu-2404 paths keep precedence (GTK comes from the runtime).
+export LD_LIBRARY_PATH="${LD_LIBRARY_PATH:+$LD_LIBRARY_PATH:}$SNAP/usr/lib/x86_64-linux-gnu"
+export GI_TYPELIB_PATH="${GI_TYPELIB_PATH:+$GI_TYPELIB_PATH:}$SNAP/usr/lib/x86_64-linux-gnu/girepository-1.0"
+
 # --setup reinstalls. The old data is only replaced once the new copy has
 # unpacked successfully, so cancelling leaves a working install in place.
 if [ "${1:-}" = "--setup" ]; then
@@ -25,11 +31,6 @@ if [ ! -x "$BIN" ]; then
   echo "The installed client looks broken. Run unrealtournament.setup to reinstall it." >&2
   exit 1
 fi
-
-# Staged libraries (NSS, gconf, etc. for CEF; OpenAL backends). Appended so
-# the gnome extension and gpu-2404 paths keep precedence. Set only for the
-# game so the installer's GTK comes purely from the gnome runtime.
-export LD_LIBRARY_PATH="${LD_LIBRARY_PATH:+$LD_LIBRARY_PATH:}$SNAP/usr/lib/x86_64-linux-gnu"
 
 # UE 4.15's bundled SDL2 predates its Wayland backend; run under XWayland.
 export SDL_VIDEODRIVER="${SDL_VIDEODRIVER:-x11}"
