@@ -12,9 +12,20 @@ pattern as installer snaps like `steam` and `quake4-installer`.
 | Path | Purpose |
 | --- | --- |
 | `snap/snapcraft.yaml` | core24, strict, `gnome` extension, plus the client's runtime libraries |
-| `snap/local/ut-launcher.sh` | First-run installer (zenity UI, or terminal when there's no display) and launcher |
+| `snap/local/ut-launcher.sh` | Runs the installer on first launch, then starts the game |
+| `snap/local/ut-installer.py` | First-run installer: a GTK4/libadwaita window, or terminal output when there's no display |
 | `snap/hooks/configure` | Validates the `download-url` option |
 | `snap/gui/unrealtournament.desktop` | Desktop entry |
+
+## Installer window
+
+The first launch opens a native GTK4/libadwaita window. It draws directly on Wayland (XWayland
+isn't needed), follows the desktop's light or dark style, and picks a local zip through the
+desktop file-chooser portal. It shows a progress bar with bytes done, transfer speed and time
+remaining, first while downloading and then while unpacking. Cancelling, or closing the window,
+keeps the partial download, and the next launch offers **Resume Download**.
+
+![Installer states: choose source, downloading, unpacking, error](docs/installer.png)
 
 ## Usage
 

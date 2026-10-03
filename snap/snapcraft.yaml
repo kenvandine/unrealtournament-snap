@@ -29,9 +29,12 @@ platforms:
 apps:
   unrealtournament:
     command: bin/ut-launcher
-    # The core24 gnome extension wires in the desktop runtime, GTK for
-    # zenity, and the gpu-2404 (mesa-2404) graphics stack.
+    # The core24 gnome extension wires in the desktop runtime (GTK4 and
+    # libadwaita for the installer window, the file chooser portal) and the
+    # gpu-2404 (mesa-2404) graphics stack.
     extensions: [gnome]
+    environment: &environment
+      PYTHONPATH: $SNAP/usr/lib/python3/dist-packages
     plugs: &plugs
       - opengl
       - audio-playback
@@ -45,6 +48,7 @@ apps:
   setup:
     command: bin/ut-launcher --setup
     extensions: [gnome]
+    environment: *environment
     plugs: *plugs
 
 parts:
@@ -52,12 +56,14 @@ parts:
     plugin: dump
     source: snap/local/
     organize:
-      # ut-launcher.sh is committed with its executable bit set; dump keeps it.
+      # Both scripts are committed with their executable bit set; dump keeps it.
       ut-launcher.sh: bin/ut-launcher
+      ut-installer.py: bin/ut-installer
     stage-packages:
-      - curl
-      - unzip
-      - zenity
+      # The GTK4/libadwaita installer window; the typelibs for Gtk 4 and
+      # Adw 1 come from the gnome runtime.
+      - python3
+      - python3-gi
       # OpenAL (bundled with the client) dlopens these audio backends.
       - libpulse0
       - libasound2t64
