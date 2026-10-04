@@ -64,6 +64,18 @@ sudo snap set unrealtournament download-url=https://mirror.example/UT-Linux.zip
 UT_CLIENT_ZIP=~/UnrealTournament-Client-XAN-3525360-Linux.zip unrealtournament
 ```
 
+## CI
+
+`.github/workflows/snap.yml` builds the snap on every push and pull request, checks that the
+launcher, installer and `libgconf-2.so.4` made it in, installs it, and exercises the `configure`
+hook. The snap is uploaded as the `unrealtournament-snap` artifact.
+
+Pushing a `v*` tag, or a manual run with **publish** ticked, releases it to the Snap Store (`edge`
+by default; a manual run can pick the channel). Publishing runs in the `snap-store` environment and
+needs the `SNAPCRAFT_STORE_CREDENTIALS` secret (`snapcraft export-login
+--snaps=unrealtournament --acls=package_access,package_push,package_update,package_release -`).
+See the store-name caveat below first.
+
 ## Client source
 
 The default download is Epic's last Linux client, `Release-Next` CL 3525360 (July 2017):

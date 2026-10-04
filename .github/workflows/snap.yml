@@ -1,0 +1,80 @@
+name: Snap
+
+on:
+  push:
+    branches: ['**']
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Upload the snap to the Snap Store
+        type: boolean
+        default: false
+      channel:
+        description: Store channel to release to
+        default: edge
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    outputs:
+      snap: ${{ steps.build.outputs.snap }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build snap
+        id: build
+        uses: snapcore/action-build@v1
+
+      - name: Check installed launcher scripts
+        run: |
+          unsquashfs -l "${{ steps.build.outputs.snap }}" > contents.txt
+          grep -qx 'squashfs-root/bin/ut-launcher' contents.txt
+          grep -qx 'squashfs-root/bin/ut-installer' contents.txt
+          grep -q 'libgconf-2.so.4' contents.txt
+
+      - name: Install and smoke-test the snap
+        run: |
+          sudo snap install --dangerous "${{ steps.build.outputs.snap }}"
+          snap info --verbose unrealtournament || true
+          # The configure hook must reject a non-http(s) download URL...
+          if sudo snap set unrealtournament download-url=ftp://example.com/x.zip; then
+            echo "configure hook accepted an invalid URL" >&2
+            exit 1
+          fi
+          # ...and accept a valid one.
+          sudo snap set unrealtournament download-url=https://example.com/UT-Linux.zip
+          sudo snap unset unrealtournament download-url
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: unrealtournament-snap
+          path: ${{ steps.build.outputs.snap }}
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    # Release tags and manual runs that ask for it; never pull requests.
+    if: >-
+      github.event_name != 'pull_request' &&
+      (startsWith(github.ref, 'refs/tags/v') ||
+       (github.event_name == 'workflow_dispatch' && inputs.publish))
+    runs-on: ubuntu-24.04
+    environment: snap-store
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: unrealtournament-snap
+
+      - name: Publish to the Snap Store
+        uses: snapcore/action-publish@v1
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+        with:
+          snap: ${{ needs.build.outputs.snap }}
+          release: ${{ inputs.channel || 'edge' }}
